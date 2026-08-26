@@ -1,0 +1,19 @@
+---
+- name: Configure Apache and PHP on Red Hat
+  hosts: centos
+  become: true
+
+  tasks:
+
+    - name: Install Apache and PHP
+      package:
+        name:
+          - httpd
+          - php
+        state: latest
+
+    - name: Start Apache
+      service:
+        name: httpd
+        state: started
+        enabled: true
