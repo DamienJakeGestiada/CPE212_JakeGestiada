@@ -1,11 +1,18 @@
 # CPE212_JakeGestiada
 
-This repository is for Automating Server Management.
+This repository is for **Automating Server Management**.
 
-## Activity 2
-This activity covers SSH key-based authentication and Git repository setup.
+## HOME SET
 
-## Machine Used
-- jake_workstation
-- jake_server1
-- jake_server2
+### Machines Used
+
+| Hostname   | Username      | IP Address       |
+| ---------- | ------------- | ---------------- |
+| WS         | `workstation` | `192.168.56.101` |
+| server1    | `jakeserver`  | `192.168.56.105` |
+| server2    | `jakeserver2` | `192.168.56.103` |
+| jakecentos | `jakecentos`  | `192.168.56.104` |
+
+### Git Branch
+
+`main` — Home environment
