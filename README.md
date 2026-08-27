@@ -1,11 +1,18 @@
 # CPE212_JakeGestiada
 
-This repository is for Automating Server Management.
+This repository is for **Automating Server Management**.
 
-## Activity 2
-This activity covers SSH key-based authentication and Git repository setup.
+##  SCHOOL LAB SET
 
-## Machine Used
-- jake_workstation
-- jake_server1
-- jake_server2
+### Machines Used
+
+| Hostname   | Username      | IP Address     |
+| ---------- | ------------- | -------------- |
+| WS         | `jakews`      | `192.168.85.4` |
+| server1    | `jakeserver1` | `192.168.85.5` |
+| server2    | `jakeserver2` | `192.168.85.6` |
+| jakecentos | `jgestiada`   | `192.168.85.8` |
+
+### Git Branch
+
+`school-lab` — School laboratory environment
