@@ -1,0 +1,8 @@
+---
+- name: Configure File Servers
+  hosts: file_servers
+  become: true
+
+  roles:
+    - role: fileserver
+      tags: [fileserver]

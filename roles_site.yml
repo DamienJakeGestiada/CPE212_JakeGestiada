@@ -7,7 +7,6 @@
     - role: web
       tags: [web]
 
-
 - name: Configure Database Servers
   hosts: db_servers
   become: true
@@ -15,3 +14,11 @@
   roles:
     - role: db
       tags: [db]
+
+- name: Configure File Servers
+  hosts: file_servers
+  become: true
+
+  roles:
+    - role: fileserver
+      tags: [fileserver]
