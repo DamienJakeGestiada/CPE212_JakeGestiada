@@ -1,1 +1,7 @@
-
+---
+- name: Ansible Laboratory Challenge
+  hosts: servers
+  tasks:
+    - name: Display Welcome Message
+      debug:
+      msg: "Welcome to Ansible"
