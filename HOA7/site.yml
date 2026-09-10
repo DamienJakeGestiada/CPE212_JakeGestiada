@@ -1,106 +1,30 @@
 ---
-- hosts: all
+- name: Base configuration
+  hosts: all
   become: true
+  roles:
+    - base
 
-  pre_tasks:
-
-    - name: Update repository index (CentOS)
-      ansible.builtin.dnf:
-        update_cache: yes
-      changed_when: false
-      when: ansible_distribution == "CentOS"
-
-    - name: Update package cache (Ubuntu)
-      ansible.builtin.apt:
-        update_cache: yes
-      changed_when: false
-      when: ansible_distribution == "Ubuntu"
-
-
-- hosts: workstations
+- name: Configure Workstations
+  hosts: workstations
   become: true
+  roles:
+    - workstations
 
-  tasks:
-
-    - name: Install unzip
-      ansible.builtin.package:
-        name: unzip
-        state: present
-
-    - name: Install Terraform
-      ansible.builtin.unarchive:
-        src: https://releases.hashicorp.com/terraform/0.12.28/terraform_0.12.28_linux_amd64.zip
-        dest: /usr/local/bin
-        remote_src: yes
-        mode: '0755'
-        owner: root
-        group: root
-
-
-- hosts: web_servers
+- name: Configure Web Servers
+  hosts: web_servers
   become: true
+  roles:
+    - web_servers
 
-  tasks:
-
-    - name: Install Apache and PHP for Ubuntu servers
-      ansible.builtin.apt:
-        name:
-          - apache2
-          - libapache2-mod-php
-        state: latest
-      when: ansible_distribution == "Ubuntu"
-
-    - name: Install Apache and PHP for CentOS servers
-      ansible.builtin.dnf:
-        name:
-          - httpd
-          - php
-        state: latest
-      when: ansible_distribution == "CentOS"
-
-    - name: Copy default HTML file for site
-      tags:
-        - apache
-        - apache2
-        - httpd
-      ansible.builtin.copy:
-        src: files/default_site.html
-        dest: /var/www/html/index.html
-        owner: root
-        group: root
-        mode: '0644'
-
-
-- hosts: db_servers
+- name: Configure Database Servers
+  hosts: db_servers
   become: true
+  roles:
+    - db_servers
 
-  tasks:
-
-    - name: Install MariaDB package (CentOS)
-      ansible.builtin.dnf:
-        name: mariadb-server
-        state: latest
-      when: ansible_distribution == "CentOS"
-
-    - name: MariaDB - Restarting/Enabling
-      ansible.builtin.service:
-        name: mariadb
-        state: restarted
-        enabled: true
-
-    - name: Install MariaDB package (Ubuntu)
-      ansible.builtin.apt:
-        name: mariadb-server
-        state: latest
-      when: ansible_distribution == "Ubuntu"
-
-
-- hosts: file_servers
+- name: Configure File Servers
+  hosts: file_servers
   become: true
-
-  tasks:
-
-    - name: Install Samba package
-      ansible.builtin.package:
-        name: samba
-        state: latest
+  roles:
+    - file_servers
