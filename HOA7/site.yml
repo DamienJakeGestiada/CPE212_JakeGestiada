@@ -1,0 +1,86 @@
+---
+- hosts: all
+  become: true
+
+  pre_tasks:
+
+    - name: Update repository index (CentOS)
+      ansible.builtin.dnf:
+        update_cache: yes
+      changed_when: false
+      when: ansible_distribution == "CentOS"
+
+    - name: Update package cache (Ubuntu)
+      ansible.builtin.apt:
+        update_cache: yes
+      changed_when: false
+      when: ansible_distribution == "Ubuntu"
+
+
+- hosts: web_servers
+  become: true
+
+  tasks:
+
+    - name: Install Apache and PHP for Ubuntu servers
+      ansible.builtin.apt:
+        name:
+          - apache2
+          - libapache2-mod-php
+        state: latest
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install Apache and PHP for CentOS servers
+      ansible.builtin.dnf:
+        name:
+          - httpd
+          - php
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+    - name: Copy default HTML file for site
+      tags:
+        - apache
+        - apache2
+        - httpd
+      ansible.builtin.copy:
+        src: files/default_site.html
+        dest: /var/www/html/index.html
+        owner: root
+        group: root
+        mode: '0644'
+
+
+- hosts: db_servers
+  become: true
+
+  tasks:
+
+    - name: Install MariaDB package (CentOS)
+      ansible.builtin.dnf:
+        name: mariadb-server
+        state: latest
+      when: ansible_distribution == "CentOS"
+
+    - name: MariaDB - Restarting/Enabling
+      ansible.builtin.service:
+        name: mariadb
+        state: restarted
+        enabled: true
+
+    - name: Install MariaDB package (Ubuntu)
+      ansible.builtin.apt:
+        name: mariadb-server
+        state: latest
+      when: ansible_distribution == "Ubuntu"
+
+
+- hosts: file_servers
+  become: true
+
+  tasks:
+
+    - name: Install Samba package
+      ansible.builtin.package:
+        name: samba
+        state: latest

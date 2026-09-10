@@ -1,0 +1,29 @@
+all:
+  children:
+
+    web_servers:
+      hosts:
+        ubuntu1:
+          ansible_host: 192.168.56.105
+          ansible_user: jakeserver
+
+        ubuntu2:
+          ansible_host: 192.168.56.103
+          ansible_user: jakeserver2
+
+        centos1:
+          ansible_host: 192.168.56.104
+          ansible_user: jakecentos
+
+    db_servers:
+      hosts:
+        ubuntu2:
+        centos1:
+
+    file_servers:
+      hosts:
+        ubuntu1:
+
+    workstations:
+      hosts:
+        ubuntu2:
