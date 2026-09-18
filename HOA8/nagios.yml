@@ -1,0 +1,12 @@
+---
+- name: Install Nagios on Ubuntu Server1
+  hosts: ubuntu
+  become: true
+  roles:
+    - nagios_ubuntu
+
+- name: Install Nagios on CentOS
+  hosts: centos
+  become: true
+  roles:
+    - nagios_centos
