@@ -3,10 +3,10 @@
   hosts: ubuntu
   become: true
   roles:
-    - nagios_ubuntu
+    - nagios
 
 - name: Install Nagios on CentOS
   hosts: centos
   become: true
   roles:
-    - nagios_centos
+    - nagios
