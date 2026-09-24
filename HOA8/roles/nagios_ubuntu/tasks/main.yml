@@ -1,0 +1,76 @@
+---
+- name: Update package cache
+  ansible.builtin.apt:
+    update_cache: yes
+
+- name: Install Nagios Core dependencies
+  ansible.builtin.apt:
+    name:
+      - autoconf
+      - gcc
+      - libc6
+      - make
+      - wget
+      - unzip
+      - apache2
+      - php
+      - libapache2-mod-php
+      - libgd-dev
+      - ufw
+      - openssl
+      - libssl-dev
+    state: present
+
+- name: Add web server user to nagios group
+  ansible.builtin.user:
+    name: www-data
+    groups: nagios
+    append: yes
+
+- name: Download Nagios Core
+  ansible.builtin.get_url:
+    url: https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.14.tar.gz
+    dest: /tmp/nagios.tar.gz
+
+- name: Extract Nagios Core
+  ansible.builtin.unarchive:
+    src: /tmp/nagios.tar.gz
+    dest: /tmp/
+    remote_src: yes
+
+- name: Configure Nagios
+  ansible.builtin.command: ./configure --with-httpd-conf=/etc/apache2/sites-enabled
+  args:
+    chdir: /tmp/nagios-4.4.14
+
+- name: Build Nagios
+  ansible.builtin.command: make all
+  args:
+    chdir: /tmp/nagios-4.4.14
+
+- name: Install Nagios binaries and configs
+  ansible.builtin.command: make {{ item }}
+  args:
+    chdir: /tmp/nagios-4.4.14
+  loop:
+    - install-groups-users
+    - install
+    - install-daemoninit
+    - install-commandmode
+    - install-config
+    - install-webconf
+
+- name: Enable Apache modules
+  ansible.builtin.command: a2enmod {{ item }}
+  loop:
+    - rewrite
+    - cgi
+
+- name: Ensure Apache and Nagios services are started
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - apache2
+    - nagios

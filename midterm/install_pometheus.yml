@@ -1,0 +1,221 @@
+---
+- name: Install prometheus
+  hosts: all
+  become: true
+  tasks:
+
+
+    - name: Update repository in Ubuntu
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Update repository in CentOS
+      ansible.builtin.yum:
+        name: "*"
+        state: latest
+        update_cache: yes
+      when: ansible_distribution == "CentOS"
+
+    - name: Install important utilities in Prometheus in Ubuntu
+      ansible.builtin.apt:
+        name:
+          - wget
+          - tar
+          - curl
+        state: present
+      when: ansible_distribution == "Ubuntu"
+
+    - name: Install important utilities in Prometheus in CentOS
+      ansible.builtin.yum:
+        name:
+          - wget
+          - tar
+          - curl
+        state: present
+      when: ansible_distribution == "CentOS"
+
+
+
+    - name: Create a group
+      ansible.builtin.group:
+        name: prometheus
+        state: present
+
+    - name: Create a user and assign it to a group
+      ansible.builtin.user:
+        name: prometheus
+        groups: prometheus
+        append: yes
+        shell: /usr/sbin/nologin
+        create_home: no
+
+
+
+    - name: Create Prometheus Directory
+      ansible.builtin.file:
+        path: /etc/prometheus
+        state: directory
+        mode: '0755'
+        owner: prometheus
+        group: prometheus
+
+    - name: Create Prometheus Libraries
+      ansible.builtin.file:
+        path: /var/lib/prometheus
+        state: directory
+        mode: '0755'
+        owner: prometheus
+        group: prometheus
+
+
+
+    - name: Download Prometheus
+      ansible.builtin.get_url:
+        url: https://github.com/prometheus/prometheus/releases/download/v2.55.1/prometheus-2.55.1.linux-amd64.tar.gz
+        dest: /tmp/prometheus-2.55.1.linux-amd64.tar.gz
+        mode: '0755'
+
+    - name: Extract Prometheus
+      ansible.builtin.unarchive:
+        src: /tmp/prometheus-2.55.1.linux-amd64.tar.gz
+        dest: /tmp
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+
+
+
+    - name: Copy Prometheus binary
+      ansible.builtin.copy:
+        src: /tmp/prometheus-2.55.1.linux-amd64/prometheus
+        dest: /usr/local/bin/prometheus
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+
+    - name: Copy Promtool binary
+      ansible.builtin.copy:
+        src: /tmp/prometheus-2.55.1.linux-amd64/promtool
+        dest: /usr/local/bin/promtool
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+
+    - name: Verify Prometheus version
+      ansible.builtin.command:
+        cmd: prometheus --version
+      register: prometheus_version
+      changed_when: false
+
+    - name: Verify Promtool version
+      ansible.builtin.command:
+        cmd: promtool --version
+      register: promtool_version
+      changed_when: false
+
+    - name: Display Prometheus version
+      ansible.builtin.debug:
+        var: prometheus_version.stdout
+
+    - name: Display Promtool version
+      ansible.builtin.debug:
+        var: promtool_version.stdout
+
+
+
+    - name: Copy Prometheus configuration
+      ansible.builtin.copy:
+        src: /tmp/prometheus-2.55.1.linux-amd64/prometheus.yml
+        dest: /etc/prometheus/prometheus.yml
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+
+    - name: Copy Prometheus consoles
+      ansible.builtin.copy:
+        src: /tmp/prometheus-2.55.1.linux-amd64/consoles
+        dest: /etc/prometheus/
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+
+    - name: Copy Prometheus console libraries
+      ansible.builtin.copy:
+        src: /tmp/prometheus-2.55.1.linux-amd64/console_libraries
+        dest: /etc/prometheus/
+        remote_src: yes
+        owner: prometheus
+        group: prometheus
+
+    - name: Set Prometheus configuration ownership
+      ansible.builtin.file:
+        path: /etc/prometheus
+        owner: prometheus
+        group: prometheus
+        recurse: yes
+
+
+
+    - name: Validate Prometheus configuration
+      ansible.builtin.command:
+        cmd: promtool check config /etc/prometheus/prometheus.yml
+      register: prometheus_config
+      changed_when: false
+
+    - name: Display configuration validation
+      ansible.builtin.debug:
+        var: prometheus_config.stdout_lines
+
+
+
+    - name: Create Prometheus systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/prometheus.service
+        owner: root
+        group: root
+        mode: '0644'
+        content: |
+          [Unit]
+          Description=Prometheus Monitoring
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          ExecStart=/usr/local/bin/prometheus \
+            --config.file=/etc/prometheus/prometheus.yml \
+            --storage.tsdb.path=/var/lib/prometheus \
+            --web.listen-address=0.0.0.0:9090
+          Restart=on-failure
+
+          [Install]
+          WantedBy=multi-user.target
+
+
+
+    - name: Verify Prometheus port
+      ansible.builtin.shell:
+        cmd: ss -tlnp | grep :9090
+      register: prometheus_port
+      changed_when: false
+
+    - name: Verify Prometheus readiness
+      ansible.builtin.command:
+        cmd: curl http://localhost:9090/-/ready
+      register: prometheus_ready
+      changed_when: false
+
+    - name: Display Prometheus status
+      ansible.builtin.debug:
+        var: prometheus_status.stdout
+
+    - name: Display Prometheus readiness
+      ansible.builtin.debug:
+        var: prometheus_ready.stdout

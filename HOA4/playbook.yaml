@@ -3,13 +3,10 @@
   hosts: linuxservers
 
   tasks:
-    - name: Ping all managed nodes
-      ping:
+    - name: Run a command
+      ansible.builtin.command: apache2 -v
+      register: command_result
 
-    - name: Display Hello World
-      debug:
-        msg: "Hello World from {{ inventory_hostname }}"
-
-    - name: Display Operating System
-      debug:
-        msg: "Operating System: {{ os_type }}"
+    - name: Display command output
+      ansible.builtin.debug:
+        var: command_result.stdout_line

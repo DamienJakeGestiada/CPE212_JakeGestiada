@@ -1,0 +1,158 @@
+---
+- name: Update Ubuntu package repository
+  ansible.builtin.apt:
+    update_cache: true
+  when: ansible_os_family == "Debian"
+
+- name: Upgrade Ubuntu packages
+  ansible.builtin.apt:
+    upgrade: dist
+  when: ansible_os_family == "Debian"
+
+- name: Install required packages on Ubuntu
+  ansible.builtin.apt:
+    name:
+      - wget
+      - tar
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Install required packages on CentOS
+  ansible.builtin.dnf:
+    name:
+      - wget
+      - curl
+      - tar
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Create Prometheus system user
+  ansible.builtin.user:
+    name: "{{ prometheus_user }}"
+    system: true
+    create_home: false
+    shell: /usr/sbin/nologin
+
+- name: Create Prometheus configuration directory
+  ansible.builtin.file:
+    path: "{{ prometheus_config_dir }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Create Prometheus data directory
+  ansible.builtin.file:
+    path: "{{ prometheus_data_dir }}"
+    state: directory
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Download Prometheus
+  ansible.builtin.get_url:
+    url: "{{ prometheus_download_url }}"
+    dest: "/tmp/{{ prometheus_archive }}"
+    mode: "0644"
+
+- name: Extract Prometheus
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ prometheus_archive }}"
+    dest: /tmp
+    remote_src: true
+
+- name: Install Prometheus binary
+  ansible.builtin.copy:
+    src: "/tmp/{{ prometheus_directory }}/prometheus"
+    dest: "{{ prometheus_binary_path }}/prometheus"
+    remote_src: true
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Install promtool binary
+  ansible.builtin.copy:
+    src: "/tmp/{{ prometheus_directory }}/promtool"
+    dest: "{{ prometheus_binary_path }}/promtool"
+    remote_src: true
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0755"
+
+- name: Copy Prometheus configuration
+  ansible.builtin.copy:
+    src: "{{ playbook_dir }}/prometheus.yml"
+    dest: "{{ prometheus_config_dir }}/prometheus.yml"
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+    mode: "0644"
+
+- name: Copy Prometheus consoles
+  ansible.builtin.copy:
+    src: "/tmp/{{ prometheus_directory }}/consoles"
+    dest: "{{ prometheus_config_dir }}/"
+    remote_src: true
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+
+- name: Copy Prometheus console libraries
+  ansible.builtin.copy:
+    src: "/tmp/{{ prometheus_directory }}/console_libraries"
+    dest: "{{ prometheus_config_dir }}/"
+    remote_src: true
+    owner: "{{ prometheus_user }}"
+    group: "{{ prometheus_group }}"
+
+- name: Validate Prometheus configuration
+  ansible.builtin.command:
+    cmd: promtool check config /etc/prometheus/prometheus.yml
+  changed_when: false
+
+- name: Create Prometheus systemd service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/prometheus.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Prometheus Monitoring
+      Wants=network-online.target
+      After=network-online.target
+
+      [Service]
+      User=prometheus
+      Group=prometheus
+      Type=simple
+      ExecStart=/usr/local/bin/prometheus \
+        --config.file=/etc/prometheus/prometheus.yml \
+        --storage.tsdb.path=/var/lib/prometheus \
+        --web.listen-address=0.0.0.0:9090
+      Restart=on-failure
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable Prometheus
+  ansible.builtin.systemd:
+    name: prometheus
+    enabled: true
+
+- name: Start Prometheus
+  ansible.builtin.systemd:
+    name: prometheus
+    state: started
+
+This one role handles both operating systems by using:
+
+when: ansible_os_family == "Debian"
+
+for Ubuntu and:
+
+when: ansible_os_family == "RedHat"
+
+for CentOS.

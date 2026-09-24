@@ -1,34 +1,32 @@
 all:
   children:
+    web_server:
+      ubuntu:
+        hosts:
+          ubuntu1:
+            ansible_host: 192.168.85.5
+            ansible_user: jakeserver1
 
-    ubuntu:
+          ubuntu2:
+            ansible_host: 192.168.85.6
+            ansible_user: jakeserver2
+
+          centos:
+            ansible_hosts: 192.168.85.8
+            ansible_user: jgestiada
+
+    db_servers:
       hosts:
-        ubuntu1:
-          ansible_host: 192.168.85.5
-          ansible_user: jakeserver1
-          os_type: Ubuntu
-
         ubuntu2:
           ansible_host: 192.168.85.6
           ansible_user: jakeserver2
-          os_type: Ubuntu
 
-      vars:
-        apache_package: apache2
-        php_package: libapache2-mod-php
-
-    centos:
-      hosts:
         centos1:
-          ansible_host: 192.168.85.8
+          ansible_hosts: 192.168.85.8
           ansible_user: jgestiada
-          os_type: CentOS
 
-      vars:
-        apache_package: httpd
-        php_package: php
-
-    linuxservers:
-      children:
-        ubuntu:
-        centos:
+    file_servers:
+      hosts:
+          ubuntu1:
+            ansible_host: 192.168.85.5
+            ansible_user: jakeserver1

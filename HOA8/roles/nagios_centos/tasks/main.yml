@@ -1,0 +1,69 @@
+---
+- name: Install Nagios Core dependencies on CentOS
+  ansible.builtin.dnf:
+    name:
+      - gcc
+      - glibc
+      - glibc-common
+      - make
+      - gettext
+      - automake
+      - autoconf
+      - wget
+      - openssl-devel
+      - net-snmp
+      - net-snmp-utils
+      - httpd
+      - php
+      - gd
+      - gd-devel
+      - unzip
+    state: present
+
+- name: Download Nagios Core
+  ansible.builtin.get_url:
+    url: https://assets.nagios.com/downloads/nagioscore/releases/nagios-4.4.14.tar.gz
+    dest: /tmp/nagios.tar.gz
+
+- name: Extract Nagios Core
+  ansible.builtin.unarchive:
+    src: /tmp/nagios.tar.gz
+    dest: /tmp/
+    remote_src: yes
+
+- name: Configure Nagios on CentOS
+  ansible.builtin.command: ./configure
+  args:
+    chdir: /tmp/nagios-4.4.14
+
+- name: Build Nagios
+  ansible.builtin.command: make all
+  args:
+    chdir: /tmp/nagios-4.4.14
+
+- name: Install Nagios binaries and configs
+  ansible.builtin.command: make {{ item }}
+  args:
+    chdir: /tmp/nagios-4.4.14
+  loop:
+    - install-groups-users
+    - install
+    - install-daemoninit
+    - install-commandmode
+    - install-config
+    - install-webconf
+
+- name: Add web server user to nagios group
+  ansible.builtin.user:
+    name: apache
+    groups: nagios
+    append: yes
+
+- name: Ensure HTTPD and Nagios services are started
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: yes
+  loop:
+    - httpd
+    - nagios
