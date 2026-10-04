@@ -1,0 +1,94 @@
+---
+# 1. Install prerequisites
+- name: Install Logstash prerequisites
+  ansible.builtin.package:
+    name:
+      - curl
+      - wget
+    state: present
+
+# 2. Add Elastic signing key
+- name: Import Elastic signing key
+  ansible.builtin.rpm_key:
+    key: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    state: present
+
+# 3. Add Elastic repository
+- name: Add Elastic 9.x repository
+  ansible.builtin.yum_repository:
+    name: elastic-9.x
+    description: Elastic repository for 9.x packages
+    baseurl: https://artifacts.elastic.co/packages/9.x/yum
+    gpgcheck: true
+    gpgkey: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    enabled: true
+    state: present
+
+# 4. Install Logstash
+- name: Install Logstash
+  ansible.builtin.package:
+    name: logstash
+    state: present
+
+# 5. Create sample log
+- name: Create Activity 10 log directory
+  ansible.builtin.file:
+    path: /var/log/cpe212
+    state: directory
+    owner: logstash
+    group: logstash
+    mode: "0755"
+
+- name: Create Activity 10 sample log
+  ansible.builtin.copy:
+    dest: /var/log/cpe212/activity10.log
+    owner: logstash
+    group: logstash
+    mode: "0644"
+    content: |
+      INFO Activity10 Log Monitoring Test
+      INFO Elasticsearch server connected
+      INFO Kibana server connected
+      INFO Logstash is monitoring this log
+
+# 6. Configure Logstash
+- name: Configure Logstash pipeline
+  ansible.builtin.copy:
+    dest: /etc/logstash/conf.d/activity10.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      input {
+        file {
+          path => "/var/log/cpe212/activity10.log"
+          start_position => "beginning"
+          sincedb_path => "/dev/null"
+        }
+      }
+
+      output {
+        stdout {
+          codec => rubydebug
+        }
+
+        elasticsearch {
+          hosts => ["http://192.168.56.105:9200"]
+          index => "activity10-logs-%{+YYYY.MM.dd}"
+        }
+      }
+
+# 7. Start Logstash
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable Logstash
+  ansible.builtin.systemd:
+    name: logstash
+    enabled: true
+
+- name: Start Logstash
+  ansible.builtin.systemd:
+    name: logstash
+    state: restarted
