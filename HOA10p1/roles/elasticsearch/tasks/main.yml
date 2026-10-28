@@ -1,0 +1,122 @@
+---
+# 1. Install prerequisites
+- name: Install Elasticsearch prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - wget
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+# 2. Configure Elasticsearch system settings
+- name: Configure vm.max_map_count
+  ansible.builtin.copy:
+    dest: /etc/sysctl.d/99-elasticsearch.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      vm.max_map_count=1048576
+
+- name: Apply vm.max_map_count
+  ansible.builtin.command:
+    cmd: sysctl -w vm.max_map_count=1048576
+  changed_when: false
+
+# 3. Add Elastic signing key
+- name: Download Elastic signing key
+  ansible.builtin.get_url:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    dest: /tmp/GPG-KEY-elasticsearch
+    mode: "0644"
+
+- name: Convert Elastic signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg /tmp/GPG-KEY-elasticsearch
+  args:
+    creates: /usr/share/keyrings/elasticsearch-keyring.gpg
+
+# 4. Add Elastic repository
+- name: Add Elastic 9.x repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main"
+    filename: elastic-9.x
+    state: present
+    update_cache: true
+
+# 5. Install Elasticsearch
+- name: Install Elasticsearch
+  ansible.builtin.apt:
+    name: elasticsearch
+    state: present
+
+# 6. Configure Elasticsearch
+- name: Create Elasticsearch data directory
+  ansible.builtin.file:
+    path: /var/lib/elasticsearch
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: "0750"
+
+- name: Create Elasticsearch log directory
+  ansible.builtin.file:
+    path: /var/log/elasticsearch
+    state: directory
+    owner: elasticsearch
+    group: elasticsearch
+    mode: "0750"
+
+- name: Create Elasticsearch logs link
+  ansible.builtin.file:
+    src: /var/log/elasticsearch
+    dest: /usr/share/elasticsearch/logs
+    state: link
+    force: true
+
+- name: Remove old Elasticsearch systemd override
+  ansible.builtin.file:
+    path: /etc/systemd/system/elasticsearch.service.d/override.conf
+    state: absent
+
+- name: Remove old transport SSL passwords
+  ansible.builtin.shell:
+    cmd: |
+      /usr/share/elasticsearch/bin/elasticsearch-keystore remove xpack.security.transport.ssl.keystore.secure_password || true
+      /usr/share/elasticsearch/bin/elasticsearch-keystore remove xpack.security.transport.ssl.truststore.secure_password || true
+  changed_when: false
+
+- name: Configure Elasticsearch
+  ansible.builtin.copy:
+    dest: /etc/elasticsearch/elasticsearch.yml
+    owner: root
+    group: elasticsearch
+    mode: "0660"
+    content: |
+      cluster.name: cpe212-activity10
+      node.name: server1
+      network.host: 192.168.56.105
+      http.port: 9200
+      discovery.type: single-node
+      path.data: /var/lib/elasticsearch
+      path.logs: /var/log/elasticsearch
+      xpack.security.enabled: false
+      xpack.security.transport.ssl.enabled: false
+      xpack.security.http.ssl.enabled: false
+
+# 7. Start Elasticsearch
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable Elasticsearch
+  ansible.builtin.systemd:
+    name: elasticsearch
+    enabled: true
+
+- name: Start Elasticsearch
+  ansible.builtin.systemd:
+    name: elasticsearch
+    state: restarted

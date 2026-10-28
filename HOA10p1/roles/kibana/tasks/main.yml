@@ -1,0 +1,65 @@
+---
+# 1. Install prerequisites
+- name: Install Kibana prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - wget
+      - curl
+      - gnupg
+    state: present
+    update_cache: true
+
+# 2. Add Elastic signing key
+- name: Download Elastic signing key
+  ansible.builtin.get_url:
+    url: https://artifacts.elastic.co/GPG-KEY-elasticsearch
+    dest: /tmp/GPG-KEY-elasticsearch
+    mode: "0644"
+
+- name: Convert Elastic signing key
+  ansible.builtin.command:
+    cmd: gpg --dearmor -o /usr/share/keyrings/elasticsearch-keyring.gpg /tmp/GPG-KEY-elasticsearch
+  args:
+    creates: /usr/share/keyrings/elasticsearch-keyring.gpg
+
+# 3. Add Elastic repository
+- name: Add Elastic 9.x repository
+  ansible.builtin.apt_repository:
+    repo: "deb [signed-by=/usr/share/keyrings/elasticsearch-keyring.gpg] https://artifacts.elastic.co/packages/9.x/apt stable main"
+    filename: elastic-9.x
+    state: present
+    update_cache: true
+
+# 4. Install Kibana
+- name: Install Kibana
+  ansible.builtin.apt:
+    name: kibana
+    state: present
+
+# 5. Configure Kibana
+- name: Configure Kibana
+  ansible.builtin.copy:
+    dest: /etc/kibana/kibana.yml
+    owner: root
+    group: kibana
+    mode: "0660"
+    content: |
+      server.port: 5601
+      server.host: "192.168.56.105"
+      elasticsearch.hosts: ["http://192.168.56.105:9200"]
+
+# 6. Start Kibana
+- name: Reload systemd
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: Enable Kibana
+  ansible.builtin.systemd:
+    name: kibana
+    enabled: true
+
+- name: Start Kibana
+  ansible.builtin.systemd:
+    name: kibana
+    state: restarted

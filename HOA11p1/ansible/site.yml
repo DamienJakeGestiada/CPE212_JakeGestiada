@@ -1,0 +1,30 @@
+---
+- name: Build Docker image on Workstation
+  hosts: workstation
+  become: true
+
+  tasks:
+    - name: Create Docker build directory
+      ansible.builtin.file:
+        path: /opt/HOA11p1
+        state: directory
+        mode: '0755'
+
+    - name: Copy Dockerfile
+      ansible.builtin.copy:
+        src: ../Dockerfile
+        dest: /opt/HOA11p1/Dockerfile
+        mode: '0644'
+
+    - name: Build Docker image
+      ansible.builtin.command:
+        cmd: docker build -t hoa11-web-db:1.0 /opt/HOA11p1
+
+    - name: Remove old container
+      ansible.builtin.command:
+        cmd: docker rm -f hoa11-web-db
+      failed_when: false
+
+    - name: Run Docker container
+      ansible.builtin.command:
+        cmd: docker run -d --name hoa11-web-db -p 8080:80 -p 3306:3306 hoa11-web-db:1.0

@@ -1,0 +1,30 @@
+---
+- name: Base configuration
+  hosts: all
+  become: true
+  roles:
+    - base
+
+- name: Configure Workstations
+  hosts: workstations
+  become: true
+  roles:
+    - workstations
+
+- name: Configure Web Servers
+  hosts: web_servers
+  become: true
+  roles:
+    - web_servers
+
+- name: Configure Database Servers
+  hosts: db_servers
+  become: true
+  roles:
+    - db_servers
+
+- name: Configure File Servers
+  hosts: file_servers
+  become: true
+  roles:
+    - file_servers
