@@ -1,0 +1,16 @@
+---
+all:
+  children:
+    enterprise_servers:
+      hosts:
+        server1:
+          ansible_host: 192.168.85.5
+          ansible_user: jakeserver1
+
+        jakecentos:
+          ansible_host: 192.168.85.8
+          ansible_user: jgestiada
+
+    prometheus_server:
+      hosts:
+        server1:
